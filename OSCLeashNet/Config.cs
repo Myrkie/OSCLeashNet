@@ -14,8 +14,7 @@ namespace OSCLeashNet
 
         public string Ip { get; set; } = "127.0.0.1";
 
-        public int ListeningPort { get; set; } = 9001;
-        public int SendingPort { get; set; } = 9000;
+        public bool DebugMode { get; set; }
         public float RunDeadzone { get; set; } = 0.70f;
         public float WalkDeadzone { get; set; } = 0.15f;
         public float ActiveDelay { get; set; } = 0.1f;

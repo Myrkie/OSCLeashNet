@@ -2,14 +2,16 @@
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>netcoreapp3.1</TargetFramework>        
         <Nullable>enable</Nullable>        
         <ApplicationIcon>VRChatOSCLeash.ico</ApplicationIcon>        
         <Company>Pumkin</Company>
+        <TargetFrameworks>net8.0-windows</TargetFrameworks>
     </PropertyGroup>
 
-    <ItemGroup>
-      <PackageReference Include="BuildSoft.OscCore" Version="1.0.5" />
-    </ItemGroup>
 
+    <ItemGroup>
+        <ProjectReference Include="..\OscQueryLibrary\OscQueryLibrary.csproj" />
+        <ProjectReference Include="..\VRChatOSCLib\VRChatOSCLib.csproj" />
+    </ItemGroup>
+    
 </Project>

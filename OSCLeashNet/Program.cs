@@ -2,16 +2,17 @@
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using BuildSoft.OscCore;
+using OscQueryLibrary;
+using VRChatOSCLib;
 
 namespace OSCLeashNet
 {
     public static class Program
     {
         const string ParamPrefix = "/avatar/parameters/";
-        const string InputPrefix = "/input/";
         
         static readonly string ZPosAddress = $"{ParamPrefix}{Config.Instance.Parameters["Z_Positive"]}";
         static readonly string ZNegAddress = $"{ParamPrefix}{Config.Instance.Parameters["Z_Negative"]}";
@@ -20,30 +21,44 @@ namespace OSCLeashNet
         static readonly string GrabAddress = $"{ParamPrefix}{Config.Instance.Parameters["PhysboneParameter"]}_IsGrabbed";
         static readonly string StretchAddress = $"{ParamPrefix}{Config.Instance.Parameters["PhysboneParameter"]}_Stretch";
         
-        static readonly object LockObj = new object();
-        static readonly LeashParameters Leash = new LeashParameters();
+        static readonly object LockObj = new();
+        static readonly LeashParameters Leash = new();
 
         static readonly float RunDeadzone = Config.Instance.RunDeadzone;
         static readonly float WalkDeadzone = Config.Instance.WalkDeadzone;
         static readonly TimeSpan InactiveDelay = TimeSpan.FromSeconds(Config.Instance.InputSendDelay);
         static readonly bool Logging = Config.Instance.Logging;
         
-        static OscClient Client;
-        static OscServer Server;
-        
+        private static readonly VRChatOSC OSC = new();
+
+        private static string prefixedname = GenerateRandomPrefixedString();
+        private static OscQueryServer OscQueryServer = new(prefixedname, Config.Instance.Ip);
+
+        private static void Dispose()
+        {
+            OSC.Dispose();
+            OscQueryServer.Dispose();
+        }
         public static async Task Main()
         {
-            Console.Title = "OSCLeashNet";
-            Console.WriteLine("\x1b OSCLeash is Running! \x1b");
+            AppDomain.CurrentDomain.ProcessExit += (_, _) => Dispose();
+            if (!Config.Instance.DebugMode)
+            { 
+                // override this in case the user wants to test in unity
+                // "receive all parameters not in avatar json" must be enabled in Lyuma av3 emulator to get input
+                OscQueryServer.OscReceivePort = 9001; 
+                OscQueryServer.OscSendPort = 9000;
+            }
+
+            Console.Title = prefixedname;
+            Console.WriteLine("OSCLeash is Running!");
             Console.WriteLine(Config.Instance.Ip == IPAddress.Loopback.ToString() ? "IP: Localhost" : $"IP: {Config.Instance.Ip} | Not Localhost? Wack.");
-            Console.WriteLine("Listening on port: " + Config.Instance.ListeningPort);
-            Console.WriteLine("Sending to port: " + Config.Instance.SendingPort);
+            Console.WriteLine("Listening on port: " + OscQueryServer.OscReceivePort);
+            Console.WriteLine("Sending to port: " + OscQueryServer.OscSendPort);
             Console.WriteLine($"Run deadzone {MathF.Round(Config.Instance.RunDeadzone * 100, 3)}% of stretch");
             Console.WriteLine($"Walking deadzone {MathF.Round(Config.Instance.WalkDeadzone * 100, 3)}% of stretch");
             Console.WriteLine($"Delays of {Config.Instance.ActiveDelay * 1000}ms & {Config.Instance.InactiveDelay * 1000}ms");
-
-            Client = new OscClient(Config.Instance.Ip, Config.Instance.SendingPort);
-
+            
             StartServer();
             await Task.Run(async () =>
             {
@@ -59,27 +74,24 @@ namespace OSCLeashNet
         
         static void StartServer()
         {
-            if(IPGlobalProperties.GetIPGlobalProperties().GetActiveUdpListeners().Any(x => x.Port == Config.Instance.ListeningPort))
+            if(IPGlobalProperties.GetIPGlobalProperties().GetActiveUdpListeners().Any(x => x.Port == OscQueryServer.OscReceivePort))
             {
-                Console.WriteLine("\x1b                                                            \x1b");
-                Console.WriteLine($"\x1b  Warning: An application is already running on port {Config.Instance.ListeningPort}!  \x1b");
-                Console.WriteLine("\x1b                                                            \x1b");
+                Console.WriteLine($"Warning: An application is already running on port {OscQueryServer.OscReceivePort}!");
                 Console.WriteLine("Press any key to Exit.");
 
                 Console.ReadKey(true);
                 Environment.Exit(0);
             }
 
-            Server = new OscServer(Config.Instance.ListeningPort);
+            OSC.Connect(Config.Instance.Ip, OscQueryServer.OscSendPort);
+            OSC.Listen(OscQueryServer.OscReceivePort);
 
-            Server.TryAddMethod(ZPosAddress, OnReceiveZPos);
-            Server.TryAddMethod(ZNegAddress, OnReceiveZNeg);
-            Server.TryAddMethod(XPosAddress, OnReceiveXPos);
-            Server.TryAddMethod(XNegAddress, OnReceiveXNeg);
-            Server.TryAddMethod(GrabAddress, OnReceiveGrab);
-            Server.TryAddMethod(StretchAddress, OnReceiveStretch);
-
-            Server.Start();
+            OSC.TryAddMethod(ZPosAddress.Replace(ParamPrefix, ""), OnReceiveZPos);
+            OSC.TryAddMethod(ZNegAddress.Replace(ParamPrefix, ""), OnReceiveZNeg);
+            OSC.TryAddMethod(XPosAddress.Replace(ParamPrefix, ""), OnReceiveXPos);
+            OSC.TryAddMethod(XNegAddress.Replace(ParamPrefix, ""), OnReceiveXNeg);
+            OSC.TryAddMethod(GrabAddress.Replace(ParamPrefix, ""), OnReceiveGrab);
+            OSC.TryAddMethod(StretchAddress.Replace(ParamPrefix, ""), OnReceiveStretch);
         }
         
         static void LeashRun()
@@ -105,12 +117,15 @@ namespace OSCLeashNet
 
             if(leashGrabbed)
             {
-                if(Leash.Stretch > RunDeadzone)
-                    LeashOutput(verticalOutput, horizontalOutput, 1f);
-                else if(Leash.Stretch > WalkDeadzone)
-                    LeashOutput(verticalOutput, horizontalOutput, 0f);
-                else
-                    LeashOutput(0f, 0f, 0f);
+                lock (LockObj)
+                {
+                    if(Leash.Stretch > RunDeadzone)
+                        LeashOutput(verticalOutput, horizontalOutput, 1f);
+                    else if(Leash.Stretch > WalkDeadzone)
+                        LeashOutput(verticalOutput, horizontalOutput, 0f);
+                    else
+                        LeashOutput(0f, 0f, 0f);
+                }
             }
             else if(leashReleased)
             {
@@ -126,20 +141,22 @@ namespace OSCLeashNet
 
         static void LeashOutput(float vertical, float horizontal, float run)
         {
-            Client.Send($"{InputPrefix}Vertical", vertical);
-            Client.Send($"{InputPrefix}Horizontal", horizontal);
-            Client.Send($"{InputPrefix}Run", run);
+            OSC.SendInput(VRCAxes.Vertical, vertical);
+            OSC.SendInput(VRCAxes.Horizontal, horizontal);
+            OSC.SendInput(VRCButton.Run, run);
 
             if(Logging)
                 Console.WriteLine($"Sending: Vertical - {MathF.Round(vertical, 2)} | Horizontal = {MathF.Round(horizontal, 2)} | Run - {run}");
         }
         
-        static void OnReceiveZPos(OscMessageValues msg)
+        static void OnReceiveZPos(VRCMessage msg)
         {
             try
             {
                 lock(LockObj)
-                    Leash.ZPositive = msg.ReadFloatElement(0);
+                {
+                    Leash.ZPositive = msg.GetValue<float>();
+                }
             }
             catch(Exception ex)
             {
@@ -147,12 +164,12 @@ namespace OSCLeashNet
             }
         }
         
-        static void OnReceiveZNeg(OscMessageValues msg)
+        static void OnReceiveZNeg(VRCMessage msg)
         {
             try
             {
                 lock(LockObj)
-                    Leash.ZNegative = msg.ReadFloatElement(0);
+                    Leash.ZNegative = msg.GetValue<float>();
             }
             catch(Exception ex)
             {
@@ -160,12 +177,12 @@ namespace OSCLeashNet
             }
         }
 
-        static void OnReceiveXPos(OscMessageValues msg)
+        static void OnReceiveXPos(VRCMessage msg)
         {
             try
             {
                 lock(LockObj)
-                    Leash.XPositive = msg.ReadFloatElement(0);
+                    Leash.XPositive = msg.GetValue<float>();
             }
             catch(Exception ex)
             {
@@ -173,12 +190,12 @@ namespace OSCLeashNet
             }
         }
 
-        static void OnReceiveXNeg(OscMessageValues msg)
+        static void OnReceiveXNeg(VRCMessage msg)
         {
             try
             {
                 lock(LockObj)
-                    Leash.XNegative = msg.ReadFloatElement(0);
+                    Leash.XNegative = msg.GetValue<float>();
             }
             catch(Exception ex)
             {
@@ -186,12 +203,12 @@ namespace OSCLeashNet
             }
         }
 
-        static void OnReceiveStretch(OscMessageValues msg)
+        static void OnReceiveStretch(VRCMessage msg)
         {
             try
             {
                 lock(LockObj)
-                    Leash.Stretch = msg.ReadFloatElement(0);
+                    Leash.Stretch = msg.GetValue<float>();
             }
             catch(Exception ex)
             {
@@ -199,17 +216,34 @@ namespace OSCLeashNet
             }
         }
 
-        static void OnReceiveGrab(OscMessageValues msg)
+        static void OnReceiveGrab(VRCMessage msg)
         {
             try
             {
                 lock(LockObj)
-                    Leash.Grabbed = msg.ReadBooleanElement(0);
+                    Leash.Grabbed = msg.GetValue<bool>();
             }
             catch(Exception ex)
             {
                 Console.WriteLine($"Exception occured when trying to read float value on address {GrabAddress}:\n{ex.Message}");
             }
+        }
+        
+        private static string GenerateRandomPrefixedString()
+        {
+            Random random = new Random();
+            StringBuilder stringBuilder = new StringBuilder("Leash-OSC-");
+
+            for (int i = 0; i < 5; i++)
+            {
+                int randomNumber = random.Next(0, 10);
+                stringBuilder.Append(randomNumber);
+            }
+        
+            char randomLetter = (char)random.Next('A', 'Z' + 1);
+            stringBuilder.Append(randomLetter);
+
+            return stringBuilder.ToString();
         }
     }
 }
