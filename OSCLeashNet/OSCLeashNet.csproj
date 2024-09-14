@@ -5,7 +5,8 @@
         <Nullable>enable</Nullable>        
         <ApplicationIcon>VRChatOSCLeash.ico</ApplicationIcon>        
         <Company>Pumkin</Company>
-        <TargetFrameworks>net8.0-windows</TargetFrameworks>
+        <TargetFramework>net8.0-windows</TargetFramework>
+        <PublishAot>true</PublishAot>
     </PropertyGroup>
 
 

@@ -3,9 +3,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace OSCLeashNet
 {
+    [JsonSerializable(typeof(Config))]
+    [JsonSourceGenerationOptions(GenerationMode = JsonSourceGenerationMode.Default, WriteIndented = true, AllowTrailingCommas = true)]
+    internal partial class ConfigSourceGenerationContext : JsonSerializerContext;
     [Serializable]
     public class Config
     {
@@ -33,8 +37,7 @@ namespace OSCLeashNet
 
         static Config LoadConfig()
         {
-            var options = new JsonSerializerOptions() { WriteIndented = true, AllowTrailingCommas = true };
-            Config? cfg = File.Exists(ConfigPath) ? JsonSerializer.Deserialize<Config>(File.ReadAllText(ConfigPath), options) : null;
+            Config? cfg = File.Exists(ConfigPath) ? JsonSerializer.Deserialize(File.ReadAllText(ConfigPath), ConfigSourceGenerationContext.Default.Config) : null;
             if(cfg == null)
             {
                 cfg = new Config();
@@ -46,8 +49,7 @@ namespace OSCLeashNet
 
         void SaveConfig()
         {
-            var options = new JsonSerializerOptions() { WriteIndented = true, AllowTrailingCommas = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
-            string json = JsonSerializer.Serialize(this, options);
+            string json = JsonSerializer.Serialize(this, ConfigSourceGenerationContext.Default.Config);
             File.WriteAllText(ConfigPath, json);
         }
     }
