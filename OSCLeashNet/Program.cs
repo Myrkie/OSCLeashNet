@@ -42,7 +42,7 @@ namespace OSCLeashNet
         public static async Task Main()
         {
             AppDomain.CurrentDomain.ProcessExit += (_, _) => Dispose();
-            if (!Config.Instance.DebugMode)
+            if (Config.Instance.DebugMode)
             { 
                 // override this in case the user wants to test in unity
                 // "receive all parameters not in avatar json" must be enabled in Lyuma av3 emulator to get input

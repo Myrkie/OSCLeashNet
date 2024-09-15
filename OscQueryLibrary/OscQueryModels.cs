@@ -1,6 +1,13 @@
+using System.Text.Json.Serialization;
+
 namespace OscQueryLibrary;
 
-public class OscQueryModels
+[JsonSerializable(typeof(OscQueryModels.RootNode))]
+[JsonSerializable(typeof(OscQueryModels.HostInfo))]
+[JsonSerializable(typeof(OscQueryModels.Node))]
+[JsonSourceGenerationOptions(GenerationMode = JsonSourceGenerationMode.Default, WriteIndented = true)]
+internal partial class OscQuerySourceGenerationContext : JsonSerializerContext;
+public partial class OscQueryModels
 {
     public class RootNode
     {

@@ -66,8 +66,10 @@ public class OscQueryServer : IDisposable
             .WithModule(new ActionModule("/", HttpVerbs.Get,
                 ctx => ctx.SendStringAsync(
                     ctx.Request.RawUrl.Contains("HOST_INFO")
-                        ? JsonSerializer.Serialize(_hostInfo)
-                        : JsonSerializer.Serialize(_queryData), "application/json", Encoding.UTF8)));
+                        ? JsonSerializer.Serialize(_hostInfo, OscQuerySourceGenerationContext.Default.HostInfo)
+                        : JsonSerializer.Serialize(_queryData, OscQuerySourceGenerationContext.Default.Node), 
+                    "application/json", Encoding.UTF8)));
+
 
         server.RunAsync();
         Logger.Debug("OSCQueryHttpServer: Listening at {Prefix}", url);
@@ -167,7 +169,7 @@ public class OscQueryServer : IDisposable
         try
         {
             response = await client.GetStringAsync(url);
-            var rootNode = JsonSerializer.Deserialize<OscQueryModels.HostInfo>(response);
+            var rootNode = JsonSerializer.Deserialize(response, OscQuerySourceGenerationContext.Default.HostInfo);
             if (rootNode?.OSC_PORT == null)
             {
                 Logger.Error("OSCQueryHttpClient: Error no OSC port found");
@@ -208,7 +210,7 @@ public class OscQueryServer : IDisposable
         try
         {
             response = await client.GetStringAsync(url);
-            var rootNode = JsonSerializer.Deserialize<OscQueryModels.RootNode>(response);
+            var rootNode = JsonSerializer.Deserialize(response, OscQuerySourceGenerationContext.Default.RootNode);
             if (rootNode?.CONTENTS?.avatar?.CONTENTS?.parameters?.CONTENTS == null)
             {
                 Logger.Error("OSCQueryHttpClient: Error no parameters found");
@@ -284,17 +286,20 @@ public class OscQueryServer : IDisposable
 
     private void SetupJsonObjects()
     {
-        _queryData = new
+        _queryData = new OscQueryModels.Node
         {
-            DESCRIPTION = "",
+            DESCRIPTION = "", 
             FULL_PATH = "/",
             ACCESS = 0,
-            CONTENTS = new
+            CONTENTS = new Dictionary<string, OscQueryModels.Node>
             {
-                avatar = new
-                {
-                    FULL_PATH = "/avatar",
-                    ACCESS = 2
+                { 
+                    "avatar", new OscQueryModels.Node
+                    {
+                        FULL_PATH = "/avatar",
+                        ACCESS = 2,
+                        CONTENTS = new Dictionary<string, OscQueryModels.Node>()
+                    }
                 }
             }
         };
