@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace OSCLeashNet
+namespace OSCLeashNet.Misc
 {
     [JsonSerializable(typeof(Config))]
     [JsonSourceGenerationOptions(GenerationMode = JsonSourceGenerationMode.Default, WriteIndented = true, AllowTrailingCommas = true)]
@@ -17,8 +16,6 @@ namespace OSCLeashNet
         public static Config Instance { get; } = LoadConfig();
 
         public string Ip { get; set; } = "127.0.0.1";
-
-        public bool DebugMode { get; set; }
         public float RunDeadzone { get; set; } = 0.70f;
         public float WalkDeadzone { get; set; } = 0.15f;
         public float ActiveDelay { get; set; } = 0.1f;
