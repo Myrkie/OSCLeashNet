@@ -8,16 +8,16 @@
         <TargetFramework>net8.0-windows</TargetFramework>
         <PublishAot>true</PublishAot>
         <IsPackable>false</IsPackable>
-        <AssemblyVersion>1.1.0</AssemblyVersion>
-        <FileVersion>1.1.0</FileVersion>
+        <AssemblyVersion>1.1.1</AssemblyVersion>
+        <FileVersion>1.1.1</FileVersion>
     </PropertyGroup>
     
     <ItemGroup>
-        <ProjectReference Include="..\OscQueryLibrary\OscQueryLibrary.csproj" />
         <ProjectReference Include="..\VRChatOSCLib\VRChatOSCLib.csproj" />
     </ItemGroup>
     
     <ItemGroup>
+      <PackageReference Include="OscQueryLibrary" Version="1.1.0" />
       <PackageReference Include="Serilog" Version="4.0.2-dev-02226" />
       <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
     </ItemGroup>

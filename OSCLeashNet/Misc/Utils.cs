@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net;
 using System.Reflection;
 using System.Threading;
 using Serilog;
@@ -10,7 +11,7 @@ namespace OSCLeashNet.Misc
     {
         private static readonly ILogger Logger = Log.ForContext(typeof(Utils));
 
-        public static bool WaitForListening(ref VRChatOSC? oscInstance)
+        public static void WaitForListening(ref VRChatOSC? oscInstance)
         {
             FieldInfo? listeningField = null;
 
@@ -18,7 +19,7 @@ namespace OSCLeashNet.Misc
             {
                 if (oscInstance == null)
                 {
-                    Logger.Information("VRChatOSC instance is null. Waiting for it to be initialized...");
+                    Logger.Error("VRChatOSC instance is null. Waiting for it to be initialized, this can also result from VRChat not running or VRChat returning no ports.");
                     Thread.Sleep(2000);
                     continue;
                 }
@@ -51,10 +52,16 @@ namespace OSCLeashNet.Misc
                     if (isListening)
                     {
                         Logger.Information("VRChatOSC instance is ready and listening!");
-                        return true;
+                        Logger.Information(Config.Instance.Ip == IPAddress.Loopback.ToString() ? "IP: Localhost" : $"IP: {Config.Instance.Ip} | Not Localhost? Wack.");
+                        
+                        Logger.Information("OSCLeash is Running!");
+                        Logger.Information($"Run deadzone {MathF.Round(Config.Instance.RunDeadzone * 100, 3)}% of stretch");
+                        Logger.Information($"Walking deadzone {MathF.Round(Config.Instance.WalkDeadzone * 100, 3)}% of stretch");
+                        Logger.Information($"Delays of {Config.Instance.ActiveDelay * 1000}ms & {Config.Instance.InactiveDelay * 1000}ms");
+                        break;
                     }
 
-                    Logger.Information("VRChatOSC is not listening yet. Checking again...");
+                    Logger.Error("VRChatOSC is not listening yet. Checking again...");
                 }
                 catch (Exception ex)
                 {

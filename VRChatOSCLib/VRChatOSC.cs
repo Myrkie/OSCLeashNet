@@ -101,14 +101,13 @@ namespace VRChatOSCLib
         /// <summary>Listen for incoming messages from the VRChat client.</summary>
         /// <param name="localPort">The local port for receiving data on your network.</param>
         /// <param name="bufferLength">UDP buffer length, default is 4096</param>
-        public void Listen(int localPort = 9001, int bufferLength = 4096)
+        public void Listen(IPAddress localIpAddress, int localPort = 9001, int bufferLength = 4096)
         {
             if (m_Listening) return;
 
-            LocalEndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), localPort);
+            LocalEndPoint = new IPEndPoint(localIpAddress, localPort);
 
             m_Server = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp) { ReceiveTimeout = int.MaxValue };
-            // Allow other processes to reuse this ip-address/port pair.
             m_Server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
             m_Server.Bind(LocalEndPoint);
 
@@ -119,6 +118,7 @@ namespace VRChatOSCLib
 
             m_Listening = true;
         }
+
         #endregion
 
 
