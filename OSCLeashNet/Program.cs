@@ -29,14 +29,14 @@ public static class Program
 
     #region applied configs
     
-    private static readonly float RunDeadzone = Config.Instance.RunDeadzone;
-    private static readonly float WalkDeadzone = Config.Instance.WalkDeadzone;
-    private static readonly TimeSpan InactiveDelay = TimeSpan.FromSeconds(Config.Instance.InputSendDelay);
+    private static readonly float RunDeadzone = Config.Instance.Deadzone.RunDeadzone;
+    private static readonly float WalkDeadzone = Config.Instance.Deadzone.WalkDeadzone;
+    private static readonly TimeSpan InactiveDelay = TimeSpan.FromSeconds(Config.Instance.Delay.InputSendDelay);
     
     #endregion
     
     private static readonly bool Logging = Config.Instance.Logging;
-    private static readonly ILogger Logger = Log.ForContext(typeof(Program));
+    private static ILogger Logger = null;
     private static readonly string PrefixName = GenerateRandomPrefixedString();
 
     private static void Dispose()
@@ -50,25 +50,27 @@ public static class Program
         Console.Title = PrefixName;
 
         Log.Logger = new LoggerConfiguration()
-            .MinimumLevel.Debug()
+            .MinimumLevel.Verbose()
             .WriteTo.Console(
                 outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}",
                 theme: Serilog.Sinks.SystemConsole.Themes.AnsiConsoleTheme.Code)
             .CreateLogger();
-
-        var oscQueryServer = new OscQueryServer(PrefixName, IPAddress.Parse((ReadOnlySpan<char>)Config.Instance.Ip));
-        if (!Config.Instance.UseConfigPorts)
-        {
+        
+        Logger = Log.ForContext(typeof(Program));
+        
+        if (!Config.Instance.Network.UseConfigPorts)
+        { 
+            var oscQueryServer = new OscQueryServer(PrefixName, IPAddress.Parse((ReadOnlySpan<char>)Config.Instance.Network.Ip));
             oscQueryServer.FoundVrcClient += FoundVrcClient;
             oscQueryServer.Start();
-            Logger.Information("Starting up, building connections.");
+            Logger.Information($"{AppDomain.CurrentDomain.FriendlyName}: Starting up, building connections.");
             Utils.WaitForListening(ref _oscInstance);
         }
         else
         {
-            Logger.Debug("Debug mode has been activated, your ports will be defined by config.");
+            Logger.Information("Debug mode has been activated, your ports will be defined by config.");
             await PortOverride();
-
+            Utils.WaitForListening(ref _oscInstance);
         }
         Thread.Sleep(-1);
     }
@@ -91,8 +93,8 @@ public static class Program
         _oscInstance = new VRChatOSC();
         _oscInstance.Connect(ipEndPoint!.Address, ipEndPoint.Port);
         _oscInstance.Listen(ipEndPoint.Address, oscQueryServer!.OscReceivePort);
-        Logger.Information("Sending to {ip}|{port}: ", ipEndPoint.Address, ipEndPoint.Port);
-        Logger.Information("Listening on {ip}|{port}: ", ipEndPoint.Address, oscQueryServer.OscReceivePort);
+        Logger.Information("Sending to {ip}|{port} ", ipEndPoint.Address, ipEndPoint.Port);
+        Logger.Information("Listening on {ip}|{port} ", ipEndPoint.Address, oscQueryServer.OscReceivePort);
         _oscInstance.TryAddMethod(ZPosAddress, OnReceiveZPos);
         _oscInstance.TryAddMethod(ZNegAddress, OnReceiveZNeg);
         _oscInstance.TryAddMethod(XPosAddress, OnReceiveXPos);
@@ -112,11 +114,11 @@ public static class Program
         _oscInstance = null;
         
         _oscInstance = new VRChatOSC();
-        _oscInstance.Connect(Config.Instance.Ip, Config.Instance.SendingPort);
-        _oscInstance.Listen(IPAddress.Parse(Config.Instance.Ip), Config.Instance.ListeningPort);
+        _oscInstance.Connect(Config.Instance.Network.Ip, Config.Instance.Network.SendingPort);
+        _oscInstance.Listen(IPAddress.Parse(Config.Instance.Network.Ip), Config.Instance.Network.ListeningPort);
         
-        Logger.Information("Sending to {ip}|{port}: ", Config.Instance.Ip, Config.Instance.SendingPort);
-        Logger.Information("Listening on {ip}|{port}: ", Config.Instance.Ip, Config.Instance.ListeningPort);
+        Logger.Information("Sending to {ip}|{port} ", Config.Instance.Network.Ip, Config.Instance.Network.SendingPort);
+        Logger.Information("Listening on {ip}|{port} ", Config.Instance.Network.Ip, Config.Instance.Network.ListeningPort);
         _oscInstance.TryAddMethod(ZPosAddress, OnReceiveZPos);
         _oscInstance.TryAddMethod(ZNegAddress, OnReceiveZNeg);
         _oscInstance.TryAddMethod(XPosAddress, OnReceiveXPos);
@@ -130,8 +132,9 @@ public static class Program
 
     private static async Task ReceiverLoopAsync()
     {
+        await LeashOutput(0f, 0f, 0f);
         var currentCancellationToken = _loopCancellationToken.Token;
-        var delay = TimeSpan.FromSeconds(Config.Instance.ActiveDelay);
+        var delay = TimeSpan.FromSeconds(Config.Instance.Delay.ActiveDelay);
         while (!currentCancellationToken.IsCancellationRequested)
         {
             try

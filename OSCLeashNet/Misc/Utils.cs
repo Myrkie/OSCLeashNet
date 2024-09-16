@@ -52,12 +52,11 @@ namespace OSCLeashNet.Misc
                     if (isListening)
                     {
                         Logger.Information("VRChatOSC instance is ready and listening!");
-                        Logger.Information(Config.Instance.Ip == IPAddress.Loopback.ToString() ? "IP: Localhost" : $"IP: {Config.Instance.Ip} | Not Localhost? Wack.");
-                        
                         Logger.Information("OSCLeash is Running!");
-                        Logger.Information($"Run deadzone {MathF.Round(Config.Instance.RunDeadzone * 100, 3)}% of stretch");
-                        Logger.Information($"Walking deadzone {MathF.Round(Config.Instance.WalkDeadzone * 100, 3)}% of stretch");
-                        Logger.Information($"Delays of {Config.Instance.ActiveDelay * 1000}ms & {Config.Instance.InactiveDelay * 1000}ms");
+                        
+                        Logger.Information($"Run deadzone {MathF.Round(Config.Instance.Deadzone.RunDeadzone * 100, 3)}% of stretch");
+                        Logger.Information($"Walking deadzone {MathF.Round(Config.Instance.Deadzone.WalkDeadzone * 100, 3)}% of stretch");
+                        Logger.Information($"Delays of {Config.Instance.Delay.ActiveDelay * 1000}ms & {Config.Instance.Delay.InactiveDelay * 1000}ms");
                         break;
                     }
 
