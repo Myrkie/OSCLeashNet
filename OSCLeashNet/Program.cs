@@ -36,7 +36,7 @@ public static class Program
     #endregion
     
     private static readonly bool Logging = Config.Instance.Logging;
-    private static ILogger Logger = null;
+    private static ILogger _logger = null!;
     private static readonly string PrefixName = GenerateRandomPrefixedString();
 
     private static void Dispose()
@@ -56,19 +56,19 @@ public static class Program
                 theme: Serilog.Sinks.SystemConsole.Themes.AnsiConsoleTheme.Code)
             .CreateLogger();
         
-        Logger = Log.ForContext(typeof(Program));
+        _logger = Log.ForContext(typeof(Program));
         
         if (!Config.Instance.Network.UseConfigPorts)
         { 
             var oscQueryServer = new OscQueryServer(PrefixName, IPAddress.Parse((ReadOnlySpan<char>)Config.Instance.Network.Ip));
             oscQueryServer.FoundVrcClient += FoundVrcClient;
             oscQueryServer.Start();
-            Logger.Information($"{AppDomain.CurrentDomain.FriendlyName}: Starting up, building connections.");
+            _logger.Information($"{AppDomain.CurrentDomain.FriendlyName}: Starting up, building connections.");
             Utils.WaitForListening(ref _oscInstance);
         }
         else
         {
-            Logger.Information("Debug mode has been activated, your ports will be defined by config.");
+            _logger.Information("Debug mode has been activated, your ports will be defined by config.");
             await PortOverride();
             Utils.WaitForListening(ref _oscInstance);
         }
@@ -93,8 +93,8 @@ public static class Program
         _oscInstance = new VRChatOSC();
         _oscInstance.Connect(ipEndPoint!.Address, ipEndPoint.Port);
         _oscInstance.Listen(ipEndPoint.Address, oscQueryServer!.OscReceivePort);
-        Logger.Information("Sending to {ip}|{port} ", ipEndPoint.Address, ipEndPoint.Port);
-        Logger.Information("Listening on {ip}|{port} ", ipEndPoint.Address, oscQueryServer.OscReceivePort);
+        _logger.Information("Sending to {ip}|{port} ", ipEndPoint.Address, ipEndPoint.Port);
+        _logger.Information("Listening on {ip}|{port} ", ipEndPoint.Address, oscQueryServer.OscReceivePort);
         _oscInstance.TryAddMethod(ZPosAddress, OnReceiveZPos);
         _oscInstance.TryAddMethod(ZNegAddress, OnReceiveZNeg);
         _oscInstance.TryAddMethod(XPosAddress, OnReceiveXPos);
@@ -117,15 +117,16 @@ public static class Program
         _oscInstance.Connect(Config.Instance.Network.Ip, Config.Instance.Network.SendingPort);
         _oscInstance.Listen(IPAddress.Parse(Config.Instance.Network.Ip), Config.Instance.Network.ListeningPort);
         
-        Logger.Information("Sending to {ip}|{port} ", Config.Instance.Network.Ip, Config.Instance.Network.SendingPort);
-        Logger.Information("Listening on {ip}|{port} ", Config.Instance.Network.Ip, Config.Instance.Network.ListeningPort);
+        _logger.Information("Sending to {ip}|{port} ", Config.Instance.Network.Ip, Config.Instance.Network.SendingPort);
+        _logger.Information("Listening on {ip}|{port} ", Config.Instance.Network.Ip, Config.Instance.Network.ListeningPort);
         _oscInstance.TryAddMethod(ZPosAddress, OnReceiveZPos);
         _oscInstance.TryAddMethod(ZNegAddress, OnReceiveZNeg);
         _oscInstance.TryAddMethod(XPosAddress, OnReceiveXPos);
         _oscInstance.TryAddMethod(XNegAddress, OnReceiveXNeg);
         _oscInstance.TryAddMethod(GrabAddress, OnReceiveGrab);
         _oscInstance.TryAddMethod(StretchAddress, OnReceiveStretch);
-
+        _oscInstance.TryAddMethod("Misc/Ping", ReceivedPing);
+        
         await ErrorHandledTask.Run(ReceiverLoopAsync);
     }
 
@@ -143,7 +144,7 @@ public static class Program
             }
             catch (Exception e)
             {
-                Logger.Error(e, "Error in receiver loop");
+                _logger.Error(e, "Error in receiver loop");
             }
             await Task.Delay(delay, currentCancellationToken);
         }
@@ -204,7 +205,21 @@ public static class Program
         await _oscInstance.SendInputAsync(VRCButton.Run, run);
 
         if(Logging)
-            Logger.Information($"Sending: Vertical - {MathF.Round(vertical, 2)} | Horizontal = {MathF.Round(horizontal, 2)} | Run - {run}");
+            _logger.Information($"Sending: Vertical - {MathF.Round(vertical, 2)} | Horizontal = {MathF.Round(horizontal, 2)} | Run - {run}");
+    }
+    
+    private static void ReceivedPing(VRCMessage msg)
+    {
+        if (msg.GetValue() is not bool ping) return;
+        if (ping)
+        {
+            _logger.Information($"{msg.AvatarParameter} Changed state to | {ping}");
+                
+        }
+        else
+        {
+            _logger.Information($"{msg.AvatarParameter} Changed state to | {ping}");
+        }
     }
     
     static void OnReceiveZPos(VRCMessage msg)
@@ -218,7 +233,7 @@ public static class Program
         }
         catch (Exception ex)
         {
-            Logger.Error(
+            _logger.Error(
                 "Exception occured when trying to read float value on address {Zpos}:\n{exMsg}", ZPosAddress, ex);
         }
     }
@@ -232,7 +247,7 @@ public static class Program
         }
         catch (Exception ex)
         {
-            Logger.Error(
+            _logger.Error(
                 "Exception occured when trying to read float value on address {Zneg}:\n{exMsg}", ZNegAddress, ex);
         }
     }
@@ -246,7 +261,7 @@ public static class Program
         }
         catch (Exception ex)
         {
-            Logger.Error(
+            _logger.Error(
                 "Exception occured when trying to read float value on address {Xpos}:\n{exMsg}", XPosAddress, ex);
         }
     }
@@ -260,7 +275,7 @@ public static class Program
         }
         catch (Exception ex)
         {
-            Logger.Error(
+            _logger.Error(
                 "Exception occured when trying to read float value on address {Xneg}:\n{exMsg}", XNegAddress, ex);
         }
     }
@@ -274,7 +289,7 @@ public static class Program
         }
         catch (Exception ex)
         {
-            Logger.Error(
+            _logger.Error(
                 "Exception occured when trying to read float value on address {Stretch}:\n{exMsg}", StretchAddress, ex);
         }
     }
@@ -288,7 +303,7 @@ public static class Program
         }
         catch (Exception ex)
         {
-            Logger.Error(
+            _logger.Error(
                 "Exception occured when trying to read float value on address {Grab}:\n{exMsg}", GrabAddress, ex);
         }
     }
