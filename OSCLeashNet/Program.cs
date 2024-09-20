@@ -101,6 +101,8 @@ public static class Program
         _oscInstance.TryAddMethod(XNegAddress, OnReceiveXNeg);
         _oscInstance.TryAddMethod(GrabAddress, OnReceiveGrab);
         _oscInstance.TryAddMethod(StretchAddress, OnReceiveStretch);
+        _oscInstance.TryAddMethod("Misc/Ping", ReceivedPing);
+
 
         _currentOscQueryServer = oscQueryServer;
         await ErrorHandledTask.Run(ReceiverLoopAsync);
