@@ -2,8 +2,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OSCLeashNet", "OSCLeashNet\OSCLeashNet.csproj", "{B517BDB6-FEE9-4CAB-A94D-0544DBA441C3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VRChatOSCLib", "VRChatOSCLib\VRChatOSCLib.csproj", "{4B05854B-3F89-44EB-840A-C54D8CF546A9}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -14,9 +12,5 @@ Global
 		{B517BDB6-FEE9-4CAB-A94D-0544DBA441C3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B517BDB6-FEE9-4CAB-A94D-0544DBA441C3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B517BDB6-FEE9-4CAB-A94D-0544DBA441C3}.Release|Any CPU.Build.0 = Release|Any CPU
-		{4B05854B-3F89-44EB-840A-C54D8CF546A9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{4B05854B-3F89-44EB-840A-C54D8CF546A9}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{4B05854B-3F89-44EB-840A-C54D8CF546A9}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{4B05854B-3F89-44EB-840A-C54D8CF546A9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

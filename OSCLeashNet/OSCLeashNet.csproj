@@ -13,13 +13,16 @@
     </PropertyGroup>
     
     <ItemGroup>
-        <ProjectReference Include="..\VRChatOSCLib\VRChatOSCLib.csproj" />
-    </ItemGroup>
-    
-    <ItemGroup>
       <PackageReference Include="OscQueryLibrary" Version="1.1.0" />
       <PackageReference Include="Serilog" Version="4.0.2-dev-02226" />
       <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
+    </ItemGroup>
+
+
+    <ItemGroup>
+        <Reference Include="VRChatOSCLib">
+            <HintPath>..\libs\VRChatOSCLib.dll</HintPath>
+        </Reference>
     </ItemGroup>
     
 </Project>
