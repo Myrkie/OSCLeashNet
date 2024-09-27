@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Net;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using OSCLeashNet.Misc;
@@ -37,7 +36,7 @@ public static class Program
     
     private static readonly bool Logging = Config.Instance.Logging;
     private static ILogger _logger = null!;
-    private static readonly string PrefixName = GenerateRandomPrefixedString();
+    private static readonly string PrefixName = Utils.GenerateRandomPrefixedString();
 
     private static void Dispose()
     {
@@ -308,22 +307,5 @@ public static class Program
             _logger.Error(
                 "Exception occured when trying to read float value on address {Grab}:\n{exMsg}", GrabAddress, ex);
         }
-    }
-
-    private static string GenerateRandomPrefixedString()
-    {
-        Random random = new Random();
-        StringBuilder stringBuilder = new StringBuilder("Leash-OSC-");
-
-        for (int i = 0; i < 5; i++)
-        {
-            int randomNumber = random.Next(0, 10);
-            stringBuilder.Append(randomNumber);
-        }
-
-        char randomLetter = (char)random.Next('A', 'Z' + 1);
-        stringBuilder.Append(randomLetter);
-
-        return stringBuilder.ToString();
     }
 }

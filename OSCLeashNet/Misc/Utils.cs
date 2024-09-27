@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Net;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 using Serilog;
 using VRChatOSCLib;
@@ -9,6 +9,23 @@ namespace OSCLeashNet.Misc
 {
     public static class Utils
     {
+        public static string GenerateRandomPrefixedString()
+        {
+            Random random = new Random();
+            StringBuilder stringBuilder = new StringBuilder("Leash-OSC-");
+
+            for (int i = 0; i < 5; i++)
+            {
+                int randomNumber = random.Next(0, 10);
+                stringBuilder.Append(randomNumber);
+            }
+
+            char randomLetter = (char)random.Next('A', 'Z' + 1);
+            stringBuilder.Append(randomLetter);
+
+            return stringBuilder.ToString();
+        }
+        
         private static readonly ILogger Logger = Log.ForContext(typeof(Utils));
 
         public static void WaitForListening(ref VRChatOSC? oscInstance)
