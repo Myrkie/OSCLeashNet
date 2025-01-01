@@ -35,7 +35,7 @@ public static class Program
     #endregion
     
     private static readonly bool Logging = Config.Instance.Logging;
-    private static ILogger _logger = null!;
+    private static ILogger _logger = Log.ForContext(typeof(Program));
     private static readonly string PrefixName = Utils.GenerateRandomPrefixedString();
 
     private static void Dispose()
@@ -54,8 +54,6 @@ public static class Program
                 outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}",
                 theme: Serilog.Sinks.SystemConsole.Themes.AnsiConsoleTheme.Code)
             .CreateLogger();
-        
-        _logger = Log.ForContext(typeof(Program));
         
         if (!Config.Instance.Network.UseConfigPorts)
         { 
