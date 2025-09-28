@@ -23,7 +23,7 @@ public static class Program
     
     #endregion
     
-    private static readonly object LockObj = new();
+    private static readonly Lock LockObj = new();
     private static readonly LeashParameters Leash = new();
 
     #region applied configs
@@ -35,7 +35,7 @@ public static class Program
     #endregion
     
     private static readonly bool Logging = Config.Instance.Logging;
-    private static ILogger _logger = Log.ForContext(typeof(Program));
+    private static ILogger _logger = null!;
     private static readonly string PrefixName = Utils.GenerateRandomPrefixedString();
 
     private static void Dispose()
@@ -54,21 +54,23 @@ public static class Program
                 outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}",
                 theme: Serilog.Sinks.SystemConsole.Themes.AnsiConsoleTheme.Code)
             .CreateLogger();
+        _logger = Log.ForContext(typeof(Program));
         
         if (!Config.Instance.Network.UseConfigPorts)
         { 
             var oscQueryServer = new OscQueryServer(PrefixName, IPAddress.Parse((ReadOnlySpan<char>)Config.Instance.Network.Ip));
-            oscQueryServer.FoundVrcClient += FoundVrcClient;
+            
+            await oscQueryServer.FoundVrcClient.SubscribeAsync(ipEndPoint => FoundVrcClient(oscQueryServer, ipEndPoint));
             oscQueryServer.Start();
-            _logger.Information($"{AppDomain.CurrentDomain.FriendlyName}: Starting up, building connections.");
-            Utils.WaitForListening(ref _oscInstance);
+            _logger.Information("{CurrentDomainFriendlyName}: Starting up, building connections.", AppDomain.CurrentDomain.FriendlyName);
         }
         else
         {
             _logger.Information("Debug mode has been activated, your ports will be defined by config.");
             await PortOverride();
-            Utils.WaitForListening(ref _oscInstance);
         }
+
+        Utils.WaitForListening(ref _oscInstance);
         Thread.Sleep(-1);
     }
 
@@ -204,21 +206,13 @@ public static class Program
         await _oscInstance.SendInputAsync(VRCButton.Run, run);
 
         if(Logging)
-            _logger.Information($"Sending: Vertical - {MathF.Round(vertical, 2)} | Horizontal = {MathF.Round(horizontal, 2)} | Run - {run}");
+            _logger.Information("Sending: Vertical = {Round} | Horizontal = {F} | Run - {Run}", MathF.Round(vertical, 2), MathF.Round(horizontal, 2), run);
     }
     
     private static void ReceivedPing(VRCMessage msg)
     {
         if (msg.GetValue() is not bool ping) return;
-        if (ping)
-        {
-            _logger.Information($"{msg.AvatarParameter} Changed state to | {ping}");
-                
-        }
-        else
-        {
-            _logger.Information($"{msg.AvatarParameter} Changed state to | {ping}");
-        }
+        _logger.Information($"{msg.AvatarParameter} Changed state to | {ping}");
     }
     
     static void OnReceiveZPos(VRCMessage msg)
